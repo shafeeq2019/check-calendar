@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haken-Kalender</title>
+<style>
+  :root{
+    --bg:#f5f6fa; --card:#fff; --text:#1d2433; --muted:#7a8296; --line:#e3e6ee;
+    --ok:#1f9d55; --okbg:#dff5e8; --no:#d64545; --nobg:#fde4e4; --accent:#3b6cf6; --today:#3b6cf6;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#12151c;--card:#1b2030;--text:#e8ebf3;--muted:#8d95aa;--line:#2b3247;
+      --okbg:#173a28;--nobg:#442123;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{max-width:760px;margin:0 auto;padding:16px}
+  h1{font-size:1.3rem;margin:4px 0 12px}
+  .tabs{display:flex;gap:8px;margin-bottom:12px}
+  .tabs button{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;font-size:1rem;cursor:pointer}
+  .tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .nav h2{margin:0;font-size:1.1rem}
+  .nav button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:6px 12px;font-size:1rem;cursor:pointer}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .dow{font-size:.75rem;color:var(--muted);text-align:center;padding-bottom:2px}
+  .day{aspect-ratio:1;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);
+    position:relative;cursor:pointer;font-size:.95rem;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0}
+  .day.empty{border:none;background:none;cursor:default}
+  .day .mark{font-size:1.1rem;font-weight:700;line-height:1}
+  .day.ok{background:var(--okbg);border-color:var(--ok)} .day.ok .mark{color:var(--ok)}
+  .day.no{background:var(--nobg);border-color:var(--no)} .day.no .mark{color:var(--no)}
+  .day.today{outline:2px solid var(--today);outline-offset:1px}
+  .day.future{opacity:.65}
+  .day .dot{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .legend{display:flex;gap:14px;font-size:.8rem;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+  /* overview */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .stat{text-align:center;padding:10px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+  .stat b{display:block;font-size:1.4rem}
+  .stat span{font-size:.75rem;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th{font-size:.72rem;color:var(--muted);font-weight:600;padding:4px 2px}
+  td{text-align:center;padding:3px 2px}
+  td.wk{font-size:.75rem;color:var(--muted);text-align:left;white-space:nowrap}
+  td.sum{font-size:.75rem;color:var(--muted);white-space:nowrap;text-align:right}
+  .cell{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid transparent;
+    font-weight:700;cursor:pointer;background:none;color:var(--muted);font-size:.95rem;padding:0}
+  .cell.ok{background:var(--okbg);color:var(--ok)} .cell.no{background:var(--nobg);color:var(--no)}
+  .cell.out{visibility:hidden}
+  .cell.today{border-color:var(--today)}
+  .monthhead td{padding-top:14px;font-weight:700;font-size:.95rem;text-align:left}
+  /* note list */
+  .notes{margin-top:14px}
+  .notes h3{font-size:.95rem;margin:0 0 6px}
+  .note{display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:.88rem;cursor:pointer}
+  .note .d{color:var(--muted);min-width:78px}
+  /* dialog */
+  dialog{border:none;border-radius:16px;padding:18px;width:min(92vw,420px);background:var(--card);color:var(--text)}
+  dialog::backdrop{background:rgba(0,0,0,.45)}
+  dialog h3{margin:0 0 12px}
+  .choice{display:flex;gap:8px;margin-bottom:12px}
+  .choice button{flex:1;padding:12px;font-size:1.05rem;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
+  .choice button.sel.ok{border-color:var(--ok);background:var(--okbg);color:var(--ok)}
+  .choice button.sel.no{border-color:var(--no);background:var(--nobg);color:var(--no)}
+  textarea{width:100%;min-height:100px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;resize:vertical}
+  .actions{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+  .actions button{padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:.95rem;cursor:pointer}
+  .actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .actions .danger{margin-right:auto;color:var(--no)}
+  .hint{font-size:.78rem;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>✅ Haken-Kalender</h1>
+  <div class="tabs">
+    <button id="tabCal" class="active">Kalender</button>
+    <button id="tabOv">Übersicht</button>
+  </div>
+
+  <section id="viewCal" class="card">
+    <div class="nav">
+      <button id="prevM" aria-label="Vorheriger Monat">‹</button>
+      <h2 id="monthTitle"></h2>
+      <button id="nextM" aria-label="Nächster Monat">›</button>
+    </div>
+    <div class="grid" id="calGrid"></div>
+    <div class="legend">
+      <span>✓ erledigt</span><span>✗ nicht erledigt</span><span>● hat Notiz</span><span>Tag antippen zum Bearbeiten</span>
+    </div>
+  </section>
+
+  <section id="viewOv" hidden>
+    <div class="nav card" style="margin-bottom:12px">
+      <button id="prevY">‹</button><h2 id="yearTitle"></h2><button id="nextY">›</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="card"><table id="ovTable"></table>
+      <div class="hint">Vergangene Tage ohne Haken zählen automatisch als ✗. Zum Ändern einen Tag antippen.</div>
+    </div>
+    <div class="card notes"><h3>Notizen</h3><div id="noteList"></div></div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <h3 id="dlgTitle"></h3>
+  <div class="choice">
+    <button data-s="ok" class="ok">✓ Erledigt</button>
+    <button data-s="no" class="no">✗ Nicht erledigt</button>
+  </div>
+  <textarea id="dlgNote" placeholder="Notiz zu diesem Tag…"></textarea>
+  <div class="actions">
+    <button id="dlgClear" class="danger">Löschen</button>
+    <button id="dlgCancel">Abbrechen</button>
+    <button id="dlgSave" class="primary">Speichern</button>
+  </div>
+</dialog>
+
+<script>
+const KEY = 'hakenKalender.v1';
+const MONATE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const WT = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+let data = {};
+try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { data = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
+
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const today = new Date(); today.setHours(0,0,0,0);
+const todayIso = iso(today);
+
+let viewY = today.getFullYear(), viewM = today.getMonth(), ovY = today.getFullYear();
+
+// effective status: explicit, else past => automatic "no", else none
+function status(key) {
+  const e = data[key];
+  if (e && e.s) return e.s;
+  return key < todayIso ? 'auto' : '';
+}
+const symbol = s => s === 'ok' ? '✓' : (s === 'no' || s === 'auto') ? '✗' : '';
+const cls = s => s === 'auto' ? 'no' : s;
+
+function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const n = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - n);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t - y0) / 864e5 + 1) / 7);
+}
+const mondayOf = d => { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+
+/* ---------- Kalender ---------- */
+function renderCal() {
+  document.getElementById('monthTitle').textContent = `${MONATE[viewM]} ${viewY}`;
+  const g = document.getElementById('calGrid');
+  g.innerHTML = WT.map(w => `<div class="dow">${w}</div>`).join('');
+  const first = new Date(viewY, viewM, 1);
+  const lead = (first.getDay() + 6) % 7;
+  for (let i = 0; i < lead; i++) g.insertAdjacentHTML('beforeend', '<div class="day empty"></div>');
+  const days = new Date(viewY, viewM + 1, 0).getDate();
+  for (let d = 1; d <= days; d++) {
+    const key = `${viewY}-${pad(viewM+1)}-${pad(d)}`;
+    const s = status(key);
+    const el = document.createElement('button');
+    el.className = 'day ' + cls(s) + (key === todayIso ? ' today' : '') + (key > todayIso ? ' future' : '');
+    el.innerHTML = `<span>${d}</span><span class="mark">${symbol(s)}</span>` + (data[key]?.n ? '<i class="dot"></i>' : '');
+    el.onclick = () => openDay(key);
+    g.appendChild(el);
+  }
+}
+
+/* ---------- Übersicht ---------- */
+function renderOv() {
+  document.getElementById('yearTitle').textContent = ovY;
+  let ok = 0, no = 0, notes = [];
+  const end = ovY === today.getFullYear() ? todayIso : `${ovY}-12-31`;
+  for (let d = new Date(ovY, 0, 1); d.getFullYear() === ovY; d.setDate(d.getDate() + 1)) {
+    const k = iso(d), s = status(k);
+    if (s === 'ok') ok++; else if ((s === 'no' || s === 'auto') && k <= end) no++;
+    if (data[k]?.n) notes.push(k);
+  }
+  const total = ok + no, pct = total ? Math.round(ok / total * 100) : 0;
+  document.getElementById('stats').innerHTML =
+    `<div class="stat"><b style="color:var(--ok)">${ok}</b><span>✓ Tage</span></div>` +
+    `<div class="stat"><b style="color:var(--no)">${no}</b><span>✗ Tage</span></div>` +
+    `<div class="stat"><b>${pct}%</b><span>Quote</span></div>`;
+
+  // Wochen-Tabelle, nach Monat gruppiert (Woche gehört zu dem Monat, in dem sie beginnt)
+  let html = '<tr><th style="text-align:left">KW</th>' + WT.map(w => `<th>${w}</th>`).join('') + '<th>✓</th></tr>';
+  for (let m = 0; m < 12; m++) {
+    html += `<tr class="monthhead"><td colspan="9">${MONATE[m]}</td></tr>`;
+    const lastDay = new Date(ovY, m + 1, 0);
+    let wkStart = mondayOf(new Date(ovY, m, 1));
+    for (; wkStart <= lastDay; wkStart.setDate(wkStart.getDate() + 7)) {
+      let row = `<tr><td class="wk">KW ${isoWeek(wkStart)}</td>`, wok = 0, wcnt = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(wkStart); d.setDate(d.getDate() + i);
+        if (d.getMonth() !== m) { row += '<td><span class="cell out">·</span></td>'; continue; }
+        const k = iso(d), s = status(k);
+        if (s === 'ok') wok++;
+        if (k <= todayIso) wcnt++;
+        row += `<td><button class="cell ${cls(s)}${k === todayIso ? ' today' : ''}" data-k="${k}" title="${d.getDate()}.${m+1}.">${symbol(s) || d.getDate()}</button></td>`;
+      }
+      html += row + `<td class="sum">${wok}/${wcnt}</td></tr>`;
+    }
+  }
+  const t = document.getElementById('ovTable');
+  t.innerHTML = html;
+  t.querySelectorAll('.cell[data-k]').forEach(b => b.onclick = () => openDay(b.dataset.k));
+
+  const nl = document.getElementById('noteList');
+  nl.innerHTML = notes.length ? '' : '<div class="hint">Noch keine Notizen in diesem Jahr.</div>';
+  notes.sort().reverse().forEach(k => {
+    const d = parse(k), s = status(k);
+    const div = document.createElement('div');
+    div.className = 'note';
+    div.innerHTML = `<span class="d">${pad(d.getDate())}.${pad(d.getMonth()+1)}. <b style="color:var(--${s==='ok'?'ok':'no'})">${symbol(s)}</b></span><span></span>`;
+    div.lastChild.textContent = data[k].n;
+    div.onclick = () => openDay(k);
+    nl.appendChild(div);
+  });
+}
+
+/* ---------- Dialog ---------- */
+const dlg = document.getElementById('dlg');
+let curKey = null, curStatus = '';
+function openDay(key) {
+  curKey = key;
+  const e = data[key] || {};
+  curStatus = e.s || '';
+  const d = parse(key);
+  document.getElementById('dlgTitle').textContent =
+    `${['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()]}, ${d.getDate()}. ${MONATE[d.getMonth()]} ${d.getFullYear()}`;
+  document.getElementById('dlgNote').value = e.n || '';
+  paintChoice();
+  dlg.showModal();
+}
+function paintChoice() {
+  dlg.querySelectorAll('.choice button').forEach(b => b.classList.toggle('sel', b.dataset.s === curStatus));
+}
+dlg.querySelectorAll('.choice button').forEach(b => b.onclick = () => {
+  curStatus = curStatus === b.dataset.s ? '' : b.dataset.s; // erneut tippen = abwählen
+  paintChoice();
+});
+document.getElementById('dlgSave').onclick = () => {
+  const n = document.getElementById('dlgNote').value.trim();
+  if (!curStatus && !n) delete data[curKey]; else data[curKey] = { s: curStatus, n };
+  save(); dlg.close(); render();
+};
+document.getElementById('dlgClear').onclick = () => { delete data[curKey]; save(); dlg.close(); render(); };
+document.getElementById('dlgCancel').onclick = () => dlg.close();
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+/* ---------- Navigation ---------- */
+function render() { renderCal(); renderOv(); }
+document.getElementById('prevM').onclick = () => { if (--viewM < 0) { viewM = 11; viewY--; } renderCal(); };
+document.getElementById('nextM').onclick = () => { if (++viewM > 11) { viewM = 0; viewY++; } renderCal(); };
+document.getElementById('prevY').onclick = () => { ovY--; renderOv(); };
+document.getElementById('nextY').onclick = () => { ovY++; renderOv(); };
+function tab(ov) {
+  document.getElementById('viewCal').hidden = ov;
+  document.getElementById('viewOv').hidden = !ov;
+  document.getElementById('tabCal').classList.toggle('active', !ov);
+  document.getElementById('tabOv').classList.toggle('active', ov);
+}
+document.getElementById('tabCal').onclick = () => tab(false);
+document.getElementById('tabOv').onclick = () => tab(true);
+render();
+</script>
+</body>
+</html>
