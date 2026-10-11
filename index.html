@@ -99,7 +99,7 @@
     </div>
     <div class="stats" id="stats"></div>
     <div class="card"><table id="ovTable"></table>
-      <div class="hint">Vergangene Tage ohne Haken zählen automatisch als ✗. Zum Ändern einen Tag antippen.</div>
+      <div class="hint">Tage ohne Eintrag bleiben leer. Zum Ändern einen Tag antippen.</div>
     </div>
     <div class="card notes"><h3>Notizen</h3><div id="noteList"></div></div>
   </section>
@@ -136,14 +136,12 @@ const todayIso = iso(today);
 
 let viewY = today.getFullYear(), viewM = today.getMonth(), ovY = today.getFullYear();
 
-// effective status: explicit, else past => automatic "no", else none
+// status: 'ok', 'no' oder '' (leer = Standard)
 function status(key) {
-  const e = data[key];
-  if (e && e.s) return e.s;
-  return key < todayIso ? 'auto' : '';
+  return (data[key] && data[key].s) || '';
 }
-const symbol = s => s === 'ok' ? '✓' : (s === 'no' || s === 'auto') ? '✗' : '';
-const cls = s => s === 'auto' ? 'no' : s;
+const symbol = s => s === 'ok' ? '✓' : s === 'no' ? '✗' : '';
+const cls = s => s;
 
 function isoWeek(d) {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -178,10 +176,9 @@ function renderCal() {
 function renderOv() {
   document.getElementById('yearTitle').textContent = ovY;
   let ok = 0, no = 0, notes = [];
-  const end = ovY === today.getFullYear() ? todayIso : `${ovY}-12-31`;
   for (let d = new Date(ovY, 0, 1); d.getFullYear() === ovY; d.setDate(d.getDate() + 1)) {
     const k = iso(d), s = status(k);
-    if (s === 'ok') ok++; else if ((s === 'no' || s === 'auto') && k <= end) no++;
+    if (s === 'ok') ok++; else if (s === 'no') no++;
     if (data[k]?.n) notes.push(k);
   }
   const total = ok + no, pct = total ? Math.round(ok / total * 100) : 0;
@@ -203,7 +200,7 @@ function renderOv() {
         if (d.getMonth() !== m) { row += '<td><span class="cell out">·</span></td>'; continue; }
         const k = iso(d), s = status(k);
         if (s === 'ok') wok++;
-        if (k <= todayIso) wcnt++;
+        if (s) wcnt++;
         row += `<td><button class="cell ${cls(s)}${k === todayIso ? ' today' : ''}" data-k="${k}" title="${d.getDate()}.${m+1}.">${symbol(s) || d.getDate()}</button></td>`;
       }
       html += row + `<td class="sum">${wok}/${wcnt}</td></tr>`;
