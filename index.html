@@ -101,7 +101,9 @@
     <div class="card"><table id="ovTable"></table>
       <div class="hint">Tage ohne Eintrag bleiben leer. Zum Ändern einen Tag antippen.</div>
     </div>
-    <div class="card" style="margin-top:12px">
+    <div class="card notes"><h3>Notizen</h3><div id="noteList"></div></div>
+  </section>
+    <div class="card" style="margin-top:12px" id="backup">
       <h3 style="margin:0 0 8px;font-size:.95rem">Datensicherung</h3>
       <div class="actions" style="margin:0;justify-content:flex-start">
         <button id="btnExport">⬇ Exportieren</button>
@@ -110,8 +112,7 @@
       </div>
       <div class="hint" id="ioMsg">Export speichert alle Einträge als JSON-Datei. Import ersetzt die aktuellen Daten.</div>
     </div>
-    <div class="card notes"><h3>Notizen</h3><div id="noteList"></div></div>
-  </section>
+  <div class="hint" style="text-align:center;margin-top:12px">Version 4 · Datensicherung gilt für beide Tabs</div>
 </div>
 
 <dialog id="dlg">
