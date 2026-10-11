@@ -10,9 +10,13 @@
     --ok:#1f9d55; --okbg:#dff5e8; --no:#d64545; --nobg:#fde4e4; --accent:#3b6cf6; --today:#3b6cf6;
   }
   @media (prefers-color-scheme:dark){
-    :root{--bg:#12151c;--card:#1b2030;--text:#e8ebf3;--muted:#8d95aa;--line:#2b3247;
-      --okbg:#173a28;--nobg:#442123;}
+    :root:not([data-theme="light"]){--bg:#12151c;--card:#1b2030;--text:#e8ebf3;--muted:#8d95aa;--line:#2b3247;
+      --okbg:#173a28;--nobg:#442123;--ok:#3ecf7e;--no:#ff6b6b;--accent:#6b8cff;--today:#6b8cff;color-scheme:dark}
   }
+  :root[data-theme="dark"]{--bg:#12151c;--card:#1b2030;--text:#e8ebf3;--muted:#8d95aa;--line:#2b3247;
+    --okbg:#173a28;--nobg:#442123;--ok:#3ecf7e;--no:#ff6b6b;--accent:#6b8cff;--today:#6b8cff;color-scheme:dark}
+  .top{display:flex;align-items:center;justify-content:space-between}
+  #themeBtn{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:6px 12px;font-size:.9rem;cursor:pointer}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
   .wrap{max-width:760px;margin:0 auto;padding:16px}
@@ -81,7 +85,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>✅ Haken-Kalender</h1>
+  <div class="top"><h1>✅ Haken-Kalender</h1><button id="themeBtn" title="Design wechseln"></button></div>
   <div class="tabs">
     <button id="tabCal" class="active">Kalender</button>
     <button id="tabOv">Übersicht</button>
@@ -119,7 +123,7 @@
       </div>
       <div class="hint" id="ioMsg">Export speichert alle Einträge als JSON-Datei. Import ersetzt die aktuellen Daten.</div>
     </div>
-  <div class="hint" style="text-align:center;margin-top:12px">Version 5 · Datensicherung gilt für beide Tabs</div>
+  <div class="hint" style="text-align:center;margin-top:12px">Version 6 · Datensicherung gilt für beide Tabs</div>
 </div>
 
 <dialog id="dlg">
@@ -334,6 +338,24 @@ function tab(ov) {
 }
 document.getElementById('tabCal').onclick = () => tab(false);
 document.getElementById('tabOv').onclick = () => tab(true);
+
+/* ---------- Darkmode: auto -> hell -> dunkel ---------- */
+const THEME_KEY = 'hakenKalender.theme';
+const THEME_LABEL = { auto: '🌓 Auto', light: '☀️ Hell', dark: '🌙 Dunkel' };
+let theme = 'auto';
+try { theme = localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) {}
+if (!THEME_LABEL[theme]) theme = 'auto';
+function applyTheme() {
+  if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeBtn').textContent = THEME_LABEL[theme];
+}
+document.getElementById('themeBtn').onclick = () => {
+  theme = { auto: 'light', light: 'dark', dark: 'auto' }[theme];
+  try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+  applyTheme();
+};
+applyTheme();
 render();
 </script>
 </body>
