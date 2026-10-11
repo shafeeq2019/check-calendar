@@ -101,6 +101,15 @@
     <div class="card"><table id="ovTable"></table>
       <div class="hint">Tage ohne Eintrag bleiben leer. Zum Ändern einen Tag antippen.</div>
     </div>
+    <div class="card" style="margin-top:12px">
+      <h3 style="margin:0 0 8px;font-size:.95rem">Datensicherung</h3>
+      <div class="actions" style="margin:0;justify-content:flex-start">
+        <button id="btnExport">⬇ Exportieren</button>
+        <button id="btnImport">⬆ Importieren</button>
+        <input type="file" id="fileImport" accept="application/json,.json" hidden>
+      </div>
+      <div class="hint" id="ioMsg">Export speichert alle Einträge als JSON-Datei. Import ersetzt die aktuellen Daten.</div>
+    </div>
     <div class="card notes"><h3>Notizen</h3><div id="noteList"></div></div>
   </section>
 </div>
@@ -252,6 +261,40 @@ document.getElementById('dlgSave').onclick = () => {
 document.getElementById('dlgClear').onclick = () => { delete data[curKey]; save(); dlg.close(); render(); };
 document.getElementById('dlgCancel').onclick = () => dlg.close();
 dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+/* ---------- Export / Import ---------- */
+const ioMsg = t => document.getElementById('ioMsg').textContent = t;
+document.getElementById('btnExport').onclick = () => {
+  const blob = new Blob([JSON.stringify({ app: 'haken-kalender', version: 1, data }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `haken-kalender-${todayIso}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  ioMsg(`${Object.keys(data).length} Einträge exportiert.`);
+};
+document.getElementById('btnImport').onclick = () => document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  try {
+    const j = JSON.parse(await f.text());
+    const imp = j && j.app === 'haken-kalender' ? j.data : null;
+    if (!imp || typeof imp !== 'object') throw new Error();
+    const clean = {};
+    for (const [k, v] of Object.entries(imp)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(k) && v && typeof v === 'object')
+        clean[k] = { s: v.s === 'ok' || v.s === 'no' ? v.s : '', n: typeof v.n === 'string' ? v.n : '' };
+    }
+    const n = Object.keys(clean).length;
+    if (!confirm(`${n} Einträge importieren? Die aktuellen Daten (${Object.keys(data).length} Einträge) werden ersetzt.`)) return;
+    data = clean; save(); render();
+    ioMsg(`${n} Einträge importiert.`);
+  } catch (err) {
+    ioMsg('Import fehlgeschlagen: keine gültige Haken-Kalender-Datei.');
+  }
+};
 
 /* ---------- Navigation ---------- */
 function render() { renderCal(); renderOv(); }
