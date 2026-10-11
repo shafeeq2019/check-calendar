@@ -51,6 +51,12 @@
   .cell.ok{background:var(--okbg);color:var(--ok)} .cell.no{background:var(--nobg);color:var(--no)}
   .cell.out{visibility:hidden}
   .cell.today{border-color:var(--today)}
+  .mrow{display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;width:100%;padding:8px 0;border:none;border-top:1px solid var(--line);background:none;color:var(--text);font:inherit;font-size:.88rem;cursor:pointer;text-align:left}
+  .mrow:first-child{border-top:none}
+  .mrow.cur b{color:var(--accent)}
+  .bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line)}
+  .bar i{display:block;height:100%}
+  .mrow .cnt{font-size:.8rem;color:var(--muted);white-space:nowrap}
   .monthhead td{padding-top:14px;font-weight:700;font-size:.95rem;text-align:left}
   /* note list */
   .notes{margin-top:14px}
@@ -98,6 +104,7 @@
       <button id="prevY">‹</button><h2 id="yearTitle"></h2><button id="nextY">›</button>
     </div>
     <div class="stats" id="stats"></div>
+    <div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px;font-size:.95rem">Monate</h3><div id="monthOv"></div></div>
     <div class="card"><table id="ovTable"></table>
       <div class="hint">Tage ohne Eintrag bleiben leer. Zum Ändern einen Tag antippen.</div>
     </div>
@@ -112,7 +119,7 @@
       </div>
       <div class="hint" id="ioMsg">Export speichert alle Einträge als JSON-Datei. Import ersetzt die aktuellen Daten.</div>
     </div>
-  <div class="hint" style="text-align:center;margin-top:12px">Version 4 · Datensicherung gilt für beide Tabs</div>
+  <div class="hint" style="text-align:center;margin-top:12px">Version 5 · Datensicherung gilt für beide Tabs</div>
 </div>
 
 <dialog id="dlg">
@@ -191,6 +198,22 @@ function renderOv() {
     if (s === 'ok') ok++; else if (s === 'no') no++;
     if (data[k]?.n) notes.push(k);
   }
+  const mc = Array.from({ length: 12 }, () => ({ ok: 0, no: 0, n: 0, days: 0 }));
+  for (let d = new Date(ovY, 0, 1); d.getFullYear() === ovY; d.setDate(d.getDate() + 1)) {
+    const k = iso(d), s = status(k), m = mc[d.getMonth()];
+    m.days++;
+    if (s === 'ok') m.ok++; else if (s === 'no') m.no++;
+    if (data[k]?.n) m.n++;
+  }
+  document.getElementById('monthOv').innerHTML = '';
+  mc.forEach((m, i) => {
+    const b = document.createElement('button');
+    b.className = 'mrow' + (ovY === today.getFullYear() && i === today.getMonth() ? ' cur' : '');
+    b.innerHTML = `<b>${MONATE[i]}</b><div class="bar"><i style="width:${m.ok / m.days * 100}%;background:var(--ok)"></i><i style="width:${m.no / m.days * 100}%;background:var(--no)"></i></div>` +
+      `<span class="cnt"><span style="color:var(--ok)">✓ ${m.ok}</span> · <span style="color:var(--no)">✗ ${m.no}</span>${m.n ? ' · 📝 ' + m.n : ''}</span>`;
+    b.onclick = () => { viewY = ovY; viewM = i; renderCal(); tab(false); window.scrollTo(0, 0); };
+    document.getElementById('monthOv').appendChild(b);
+  });
   const total = ok + no, pct = total ? Math.round(ok / total * 100) : 0;
   document.getElementById('stats').innerHTML =
     `<div class="stat"><b style="color:var(--ok)">${ok}</b><span>✓ Tage</span></div>` +
